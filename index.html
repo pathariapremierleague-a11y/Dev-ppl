@@ -133,8 +133,11 @@
                 </div>
             </div>
 
-            <form action="https://formspree.io/f/xrpzdygp" method="POST" id="regForm" enctype="multipart/form-data">
+            <form action="https://api.web3forms.com/submit" method="POST" id="regForm" enctype="multipart/form-data">
                 
+                <!-- WEB3FORMS ACCESS KEY -->
+                <input type="hidden" name="access_key" value="8aeb6528-187c-46c1-b2ba-abcba50c013c">
+                <input type="hidden" name="subject" value="New PPL Tournament Registration">
                 <input type="hidden" name="Registration_Type" id="regTypeInput" value="Senior Player (₹450)">
 
                 <!-- PLAYER SPECIFIC FIELDS -->
@@ -258,7 +261,7 @@
                 <input type="file" name="Payment_Screenshot" id="ssInput" accept="image/*" required style="padding: 8px;">
             </div>
 
-            <button class="btn" onclick="submitFinalForm()">Generate Official Pass</button>
+            <button class="btn" id="submitBtn" onclick="submitFinalForm()">Generate Official Pass</button>
         </div>
     </div>
 
@@ -402,6 +405,10 @@
             return;
         }
 
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.innerText = "Submitting... Please Wait";
+        submitBtn.disabled = true;
+
         const form = document.getElementById('regForm');
         
         let utrField = document.getElementById('hiddenUTR');
@@ -414,48 +421,61 @@
         }
         utrField.value = utr;
 
+        // Clone SS input to main form
+        const clonedSS = ss.cloneNode(true);
+        clonedSS.name = "Payment_Screenshot";
+        clonedSS.style.display = "none";
+        form.appendChild(clonedSS);
+
         fetch(form.action, {
             method: 'POST',
-            body: new FormData(form),
-            headers: { 'Accept': 'application/json' }
-        }).then(response => {
-            const randomNum = Math.floor(100000 + Math.random() * 900000);
-            const token = 'PPL-' + randomNum;
-            
-            document.getElementById('passToken').innerText = token;
-            
-            if (currentType === 'Team') {
-                document.getElementById('passBadge').innerText = 'OFFICIAL TEAM PASS';
-                document.getElementById('passName').innerText = document.getElementById('tName').value;
-                document.getElementById('passCity').innerText = document.getElementById('tCity').value || 'Patharia';
-                document.getElementById('passCategory').innerText = 'Team Entry';
+            body: new FormData(form)
+        }).then(response => response.json()).then(data => {
+            if (data.success) {
+                const randomNum = Math.floor(100000 + Math.random() * 900000);
+                const token = 'PPL-' + randomNum;
                 
-                document.getElementById('lblField1').innerText = 'OWNER NAME';
-                document.getElementById('valField1').innerText = document.getElementById('tOwner').value;
+                document.getElementById('passToken').innerText = token;
                 
-                document.getElementById('lblField2').innerText = 'OWNER PHONE';
-                document.getElementById('valField2').innerText = document.getElementById('tPhone').value;
+                if (currentType === 'Team') {
+                    document.getElementById('passBadge').innerText = 'OFFICIAL TEAM PASS';
+                    document.getElementById('passName').innerText = document.getElementById('tName').value;
+                    document.getElementById('passCity').innerText = document.getElementById('tCity').value || 'Patharia';
+                    document.getElementById('passCategory').innerText = 'Team Entry';
+                    
+                    document.getElementById('lblField1').innerText = 'OWNER NAME';
+                    document.getElementById('valField1').innerText = document.getElementById('tOwner').value;
+                    
+                    document.getElementById('lblField2').innerText = 'OWNER PHONE';
+                    document.getElementById('valField2').innerText = document.getElementById('tPhone').value;
+                } else {
+                    document.getElementById('passBadge').innerText = 'APPROVED PLAYER';
+                    document.getElementById('passName').innerText = document.getElementById('pName').value;
+                    document.getElementById('passCity').innerText = document.getElementById('pCity').value;
+                    document.getElementById('passCategory').innerText = currentType + ' Player';
+                    
+                    document.getElementById('lblField1').innerText = 'PLAYER ROLE';
+                    document.getElementById('valField1').innerText = document.getElementById('pRole').value;
+                    
+                    document.getElementById('lblField2').innerText = 'BATTING STYLE';
+                    document.getElementById('valField2').innerText = document.getElementById('pBatting').value;
+                }
+
+                const name = currentType === 'Team' ? document.getElementById('tName').value : document.getElementById('pName').value;
+                const waMsg = `Hello, I registered for PPL.%0A%0A*Name/Team:* ${name}%0A*Type:* ${currentType}%0A*Token:* ${token}%0A*UTR:* ${utr}%0A%0APlease check my attached Pass & Payment Screenshot!`;
+                
+                document.getElementById('waBtn').href = `https://wa.me/919399840937?text=${waMsg}`;
+
+                showPage(4);
             } else {
-                document.getElementById('passBadge').innerText = 'APPROVED PLAYER';
-                document.getElementById('passName').innerText = document.getElementById('pName').value;
-                document.getElementById('passCity').innerText = document.getElementById('pCity').value;
-                document.getElementById('passCategory').innerText = currentType + ' Player';
-                
-                document.getElementById('lblField1').innerText = 'PLAYER ROLE';
-                document.getElementById('valField1').innerText = document.getElementById('pRole').value;
-                
-                document.getElementById('lblField2').innerText = 'BATTING STYLE';
-                document.getElementById('valField2').innerText = document.getElementById('pBatting').value;
+                alert('Submission failed: ' + data.message);
+                submitBtn.innerText = "Generate Official Pass";
+                submitBtn.disabled = false;
             }
-
-            const name = currentType === 'Team' ? document.getElementById('tName').value : document.getElementById('pName').value;
-            const waMsg = `Hello, I registered for PPL.%0A%0A*Name/Team:* ${name}%0A*Type:* ${currentType}%0A*Token:* ${token}%0A*UTR:* ${utr}%0A%0APlease check my attached Pass & Payment Screenshot!`;
-            
-            document.getElementById('waBtn').href = `https://wa.me/919399840937?text=${waMsg}`;
-
-            showPage(4);
         }).catch(error => {
             alert('Submission failed. Please check internet connection.');
+            submitBtn.innerText = "Generate Official Pass";
+            submitBtn.disabled = false;
         });
     }
 </script>
